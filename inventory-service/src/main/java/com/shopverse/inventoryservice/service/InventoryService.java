@@ -1,6 +1,7 @@
 package com.shopverse.inventoryservice.service;
 
 import com.shopverse.inventoryservice.dto.InventoryRequest;
+import com.shopverse.inventoryservice.dto.InventoryResponse;
 import com.shopverse.inventoryservice.model.Inventory;
 import com.shopverse.inventoryservice.repository.InventoryRepository;
 
@@ -16,8 +17,15 @@ public class InventoryService {
     private final InventoryRepository inventoryRepository;
 
     @Transactional(readOnly = true)
-    public boolean isInStock(String skuCode){
-        return inventoryRepository.findBySkuCode(skuCode).isPresent();
+    public List<InventoryResponse> isInStock(List<String> skuCode){
+        return inventoryRepository.findBySkuCodeIn(skuCode)
+                .stream()
+                .map( inventory ->
+                        InventoryResponse.builder()
+                                .skuCode(inventory.getSkuCode())
+                                .isInStock(inventory.getQuantity() >0)
+                                .build()).toList();
+
     }
 
     @Transactional
@@ -31,7 +39,6 @@ public class InventoryService {
                     return inventory;
                 }).toList();
         inventoryRepository.saveAll(inventoryList);
-
 
     }
 
