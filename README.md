@@ -1,4 +1,4 @@
-# shopverse-services
+# ShopVerse Services
 Shopverse is composed of independent Spring Boot microservices managed via a service registry, gateway, and asynchronous messaging. 
 Each service is container-ready, observable, and follows best practices for cloud deployment.
 
