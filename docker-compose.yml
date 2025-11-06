@@ -29,6 +29,35 @@ services:
     networks:
       - shopverse-network
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4.0
+    container_name: keycloak
+    command:
+      - start-dev
+      - --import-realm
+    extra_hosts:
+      - "localhost:host-gateway"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: admin
+      KC_DB_PASSWORD: admin
+#      KC_HOSTNAME: localhost
+#      KC_HOSTNAME_PORT: 8181
+      KC_HOSTNAME_STRICT: 'false'
+      KC_HOSTNAME_STRICT_HTTPS: 'false'
+
+    ports:
+      - "8181:8080"
+    volumes:
+      - ./keycloak/realms/:/opt/keycloak/data/import/
+    depends_on:
+      - postgres
+    networks:
+      - shopverse-network
+
   redis:
     image: redis:latest
     container_name: redis
@@ -94,6 +123,7 @@ services:
     depends_on:
       - discovery-server
       - redis
+      - keycloak
     networks:
       - shopverse-network
 
