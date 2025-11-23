@@ -26,35 +26,7 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: admin
-    networks:
-      - shopverse-network
-
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.4.0
-    container_name: keycloak
-    command:
-      - start-dev
-      - --import-realm
-    extra_hosts:
-      - "localhost:host-gateway"
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
-      KC_DB_USERNAME: admin
-      KC_DB_PASSWORD: admin
-#      KC_HOSTNAME: localhost
-#      KC_HOSTNAME_PORT: 8181
-      KC_HOSTNAME_STRICT: 'false'
-      KC_HOSTNAME_STRICT_HTTPS: 'false'
-
-    ports:
-      - "8181:8080"
-    volumes:
-      - ./keycloak/realms/:/opt/keycloak/data/import/
-    depends_on:
-      - postgres
+      MONGOINITDB_DATABASE: product-service
     networks:
       - shopverse-network
 
@@ -114,8 +86,8 @@ services:
   api-gateway:
     image: shopverse/api-gateway:1.0-SNAPSHOT
     container_name: api-gateway
-    volumes:
-      - ./keys:/app/keys
+#    volumes:
+#      - ./keys:/app/keys
     ports:
       - "8090:8090"
     environment:
@@ -123,7 +95,6 @@ services:
     depends_on:
       - discovery-server
       - redis
-      - keycloak
     networks:
       - shopverse-network
 
@@ -146,11 +117,13 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - DATABASE_USERNAME=admin
       - DATABASE_PASSWORD=admin
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
     depends_on:
       - postgres
       - broker
       - discovery-server
       - api-gateway
+      - zipkin
     networks:
       - shopverse-network
 
@@ -161,6 +134,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - DATABASE_USERNAME=admin
       - DATABASE_PASSWORD=admin
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
     depends_on:
       - postgres
       - discovery-server
@@ -179,6 +153,40 @@ services:
       - api-gateway
     networks:
       - shopverse-network
+
+  ## Prometheus
+  prometheus:
+    image: prom/prometheus:v3.7.3
+    container_name: prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - shopverse-network
+    depends_on:
+      - product-service
+      - inventory-service
+      - order-service
+      - notification-service
+      - discovery-server
+
+  grafana:
+    image: grafana/grafana-oss:11.2.0
+    container_name: grafana
+    restart: always
+    ports:
+      - "3000:3000"
+#    links:
+#      - prometheus:prometheus
+    networks:
+      - shopverse-network
+    volumes:
+      - ./grafana:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=password
 
 networks:
   shopverse-network:

@@ -31,6 +31,7 @@
         <spring-kafka.version>3.3.10</spring-kafka.version>
     </properties>
 
+
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -67,6 +68,9 @@
                     </from>
                     <to>
                         <image>shopverse/${project.artifactId}:${project.version}</image>
+                        <tags>
+                            <tag>local</tag> 
+                        </tags>
                     </to>
                 </configuration>
             </plugin>
@@ -104,6 +108,14 @@
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
     </dependencies>
 
