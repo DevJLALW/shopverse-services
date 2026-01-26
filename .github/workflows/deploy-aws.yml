@@ -1,0 +1,120 @@
+name: Build and Deploy to AWS EKS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  EKS_CLUSTER_NAME: shopverse-cluster
+  
+jobs:
+  build:
+    name: Build and Push Images
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 22
+        uses: actions/setup-java@v4
+        with:
+          java-version: '22'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push images with Jib
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          mvn compile jib:build \
+            -Djib.to.image=$ECR_REGISTRY/shopverse/\${project.artifactId}:\${project.version} \
+            -Djib.to.tags=latest,${{ github.sha }}
+
+      - name: Run tests
+        run: mvn test
+
+  deploy:
+    name: Deploy to EKS
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+
+      - name: Replace image placeholders in K8s manifests
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        run: |
+          # Replace placeholders with actual values
+          find k8s/ -name "*.yaml" -exec sed -i "s|\${AWS_ACCOUNT_ID}|$AWS_ACCOUNT_ID|g" {} \;
+          find k8s/ -name "*.yaml" -exec sed -i "s|\${AWS_REGION}|$AWS_REGION|g" {} \;
+
+      - name: Deploy infrastructure to EKS
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/rbac.yaml
+          kubectl apply -f k8s/configmap.yaml
+          kubectl apply -f k8s/secrets.yaml
+          kubectl apply -f k8s/infrastructure/
+
+      - name: Wait for infrastructure to be ready
+        run: |
+          kubectl wait --for=condition=ready pod -l app=postgres -n shopverse --timeout=120s || true
+          kubectl wait --for=condition=ready pod -l app=mongodb -n shopverse --timeout=120s || true
+          kubectl wait --for=condition=ready pod -l app=redis -n shopverse --timeout=60s || true
+          kubectl wait --for=condition=ready pod -l app=kafka -n shopverse --timeout=120s || true
+
+      - name: Deploy application services to EKS
+        run: |
+          # No discovery-server needed - using K8s native service discovery
+          kubectl apply -f k8s/services/
+
+      - name: Wait for deployments to be ready
+        run: |
+          kubectl rollout status deployment/api-gateway -n shopverse --timeout=180s
+          kubectl rollout status deployment/product-service -n shopverse --timeout=180s
+          kubectl rollout status deployment/order-service -n shopverse --timeout=180s
+          kubectl rollout status deployment/inventory-service -n shopverse --timeout=180s
+          kubectl rollout status deployment/notification-service -n shopverse --timeout=180s
+
+      - name: Get LoadBalancer URL
+        run: |
+          echo "Waiting for LoadBalancer to be provisioned..."
+          sleep 30
+          kubectl get svc api-gateway -n shopverse -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+          echo ""
+          echo "API Gateway is accessible at the above URL"

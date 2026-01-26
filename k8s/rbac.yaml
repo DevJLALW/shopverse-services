@@ -1,0 +1,33 @@
+# RBAC configuration for Spring Cloud Kubernetes
+# This allows pods to discover other services via Kubernetes API
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: shopverse-service-account
+  namespace: shopverse
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: shopverse-role
+  namespace: shopverse
+rules:
+  - apiGroups: [""]
+    resources: ["services", "endpoints", "pods", "configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: shopverse-role-binding
+  namespace: shopverse
+subjects:
+  - kind: ServiceAccount
+    name: shopverse-service-account
+    namespace: shopverse
+roleRef:
+  kind: Role
+  name: shopverse-role
+  apiGroup: rbac.authorization.k8s.io
