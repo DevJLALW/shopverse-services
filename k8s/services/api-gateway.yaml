@@ -16,19 +16,31 @@ spec:
         app: api-gateway
     spec:
       serviceAccountName: shopverse-service-account
+      volumes:
+        - name: keys
+          configMap:
+            name: api-gateway-keys
       containers:
         - name: api-gateway
-          image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/shopverse/api-gateway:1.0-SNAPSHOT
+          image: shopverse/api-gateway:1.0-SNAPSHOT
+          imagePullPolicy: Always
           ports:
             - containerPort: 8090
-          envFrom:
-            - configMapRef:
-                name: shopverse-config
+          volumeMounts:
+            - name: keys
+              mountPath: /app/keys
+              readOnly: true
           env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
             - name: SPRING_DATA_REDIS_HOST
               value: "redis"
             - name: SPRING_DATA_REDIS_PORT
               value: "6379"
+            - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
+              value: "http://zipkin:9411/api/v2/spans"
+            - name: MANAGEMENT_TRACING_SAMPLING_PROBABILITY
+              value: "1.0"
           resources:
             requests:
               memory: "512Mi"
@@ -55,13 +67,11 @@ kind: Service
 metadata:
   name: api-gateway
   namespace: shopverse
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
 spec:
-  type: LoadBalancer
+  type: NodePort
   selector:
     app: api-gateway
   ports:
-    - port: 80
+    - port: 8090
       targetPort: 8090
+      nodePort: 30090

@@ -1,4 +1,4 @@
-name: Build and Deploy to AWS EKS
+name: Build and Deploy API Gateway to AWS EKS
 
 on:
   push:
@@ -10,20 +10,21 @@ on:
 env:
   AWS_REGION: us-east-1
   EKS_CLUSTER_NAME: shopverse-cluster
+  ECR_REPOSITORY: shopverse/api-gateway
   
 jobs:
   build:
-    name: Build and Push Images
+    name: Build and Push API Gateway Image
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 22
+      - name: Set up JDK 24
         uses: actions/setup-java@v4
         with:
-          java-version: '22'
+          java-version: '24'
           distribution: 'temurin'
           cache: maven
 
@@ -38,16 +39,16 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push images with Jib
+      - name: Build and push API Gateway image with Jib
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          mvn compile jib:build \
-            -Djib.to.image=$ECR_REGISTRY/shopverse/\${project.artifactId}:\${project.version} \
-            -Djib.to.tags=latest,${{ github.sha }}
+          mvn clean compile jib:build -pl api-gateway \
+            -Djib.to.image=$ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:${{ github.sha }} \
+            -Djib.to.tags=latest
 
       - name: Run tests
-        run: mvn test
+        run: mvn test -pl api-gateway
 
   deploy:
     name: Deploy to EKS
@@ -74,47 +75,51 @@ jobs:
         run: |
           aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
 
-      - name: Replace image placeholders in K8s manifests
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-        run: |
-          # Replace placeholders with actual values
-          find k8s/ -name "*.yaml" -exec sed -i "s|\${AWS_ACCOUNT_ID}|$AWS_ACCOUNT_ID|g" {} \;
-          find k8s/ -name "*.yaml" -exec sed -i "s|\${AWS_REGION}|$AWS_REGION|g" {} \;
-
-      - name: Deploy infrastructure to EKS
+      - name: Deploy namespace and RBAC
         run: |
           kubectl apply -f k8s/namespace.yaml
           kubectl apply -f k8s/rbac.yaml
-          kubectl apply -f k8s/configmap.yaml
-          kubectl apply -f k8s/secrets.yaml
-          kubectl apply -f k8s/infrastructure/
 
-      - name: Wait for infrastructure to be ready
+      - name: Create ConfigMap for API Gateway keys from GitHub Secret
         run: |
-          kubectl wait --for=condition=ready pod -l app=postgres -n shopverse --timeout=120s || true
-          kubectl wait --for=condition=ready pod -l app=mongodb -n shopverse --timeout=120s || true
-          kubectl wait --for=condition=ready pod -l app=redis -n shopverse --timeout=60s || true
-          kubectl wait --for=condition=ready pod -l app=kafka -n shopverse --timeout=120s || true
+          # Create temp file from GitHub Secret (never exposed in logs)
+          echo "${{ secrets.PEM_FILE_CONTENT }}" > /tmp/private.pem
+          
+          # Create ConfigMap from temp file
+          kubectl create configmap api-gateway-keys \
+            --from-file=/tmp/private.pem \
+            -n shopverse \
+            --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Clean up sensitive temp file
+          rm /tmp/private.pem
 
-      - name: Deploy application services to EKS
+      - name: Deploy Redis
         run: |
-          # No discovery-server needed - using K8s native service discovery
-          kubectl apply -f k8s/services/
+          kubectl apply -f k8s/infrastructure/redis.yaml
 
-      - name: Wait for deployments to be ready
+      - name: Wait for Redis to be ready
         run: |
-          kubectl rollout status deployment/api-gateway -n shopverse --timeout=180s
-          kubectl rollout status deployment/product-service -n shopverse --timeout=180s
-          kubectl rollout status deployment/order-service -n shopverse --timeout=180s
-          kubectl rollout status deployment/inventory-service -n shopverse --timeout=180s
-          kubectl rollout status deployment/notification-service -n shopverse --timeout=180s
+          kubectl wait --for=condition=ready pod -l app=redis -n shopverse --timeout=120s
 
-      - name: Get LoadBalancer URL
+      - name: Deploy API Gateway
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Update the api-gateway.yaml with ECR image
+          sed -i "s|shopverse/api-gateway:1.0-SNAPSHOT|$ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG|g" k8s/services/api-gateway.yaml
+          sed -i "s|imagePullPolicy: Never|imagePullPolicy: Always|g" k8s/services/api-gateway.yaml
+          kubectl apply -f k8s/services/api-gateway.yaml
+
+      - name: Wait for API Gateway to be ready
+        run: |
+          kubectl rollout status deployment/api-gateway -n shopverse --timeout=300s
+
+      - name: Get API Gateway endpoint
         run: |
           echo "Waiting for LoadBalancer to be provisioned..."
           sleep 30
+          echo "API Gateway LoadBalancer DNS:"
           kubectl get svc api-gateway -n shopverse -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
           echo ""
-          echo "API Gateway is accessible at the above URL"

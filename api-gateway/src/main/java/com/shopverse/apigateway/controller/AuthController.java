@@ -22,7 +22,7 @@ public class AuthController {
 
 
 
-    public AuthController(@Value("classpath:certs/private.pem") Resource keyResource) throws Exception{
+    public AuthController(@Value("file:/app/keys/private.pem") Resource keyResource) throws Exception{
         String privateKeyContent = new String(keyResource.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
                 .replaceAll("-----BEGIN (.*?)-----", "")
                 .replaceAll("-----END (.*?)-----", "")

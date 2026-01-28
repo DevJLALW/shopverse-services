@@ -23,6 +23,11 @@
 ### Application Properties with sensitive data ###
 **/application-dev.properties
 
+### Security - Never commit private keys ###
+keys/*.pem
+keys/*.key
+keys/private.*
+
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*

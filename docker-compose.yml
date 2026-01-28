@@ -93,7 +93,6 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
     depends_on:
-      - discovery-server
       - redis
     networks:
       - shopverse-network

@@ -6,21 +6,11 @@ namespace: shopverse
 
 resources:
   - namespace.yaml
-  - configmap.yaml
-  - secrets.yaml
   - rbac.yaml
-  # Infrastructure
-  - infrastructure/postgres.yaml
-  - infrastructure/mongodb.yaml
+  # Infrastructure (Redis only for local API Gateway deployment)
   - infrastructure/redis.yaml
-  - infrastructure/kafka.yaml
-  - infrastructure/zipkin.yaml
-  # Application Services (No discovery-server - using K8s native discovery)
+  # Application Services (API Gateway only)
   - services/api-gateway.yaml
-  - services/product-service.yaml
-  - services/order-service.yaml
-  - services/inventory-service.yaml
-  - services/notification-service.yaml
 
 commonLabels:
   app.kubernetes.io/part-of: shopverse-services
