@@ -9,8 +9,11 @@ on:
 
 env:
   AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   EKS_CLUSTER_NAME: shopverse-cluster
   ECR_REPOSITORY: shopverse/api-gateway
+  ECR_REGISTRY_ALIAS: shopverse
+  NAMESPACE: shopverse
   
 jobs:
   build:
