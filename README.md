@@ -8,8 +8,6 @@ ShopVerse is a collection of Spring Boot microservices (API Gateway, service dis
 - **Messaging & infra:** Kafka, PostgreSQL, MongoDB, Redis
 - **Observability:** Zipkin, Prometheus, Grafana
 
-**This README** contains quick start instructions to build the service images (via Maven + Jib) and run everything locally using Docker Compose.
-
 ## Prerequisites
 - **Docker & Docker Compose**: Ensure Docker Desktop is installed and running.
 - **Maven**: Required to build the Java modules and produce Docker images via Jib.
@@ -76,16 +74,6 @@ Default Grafana credentials (configured in `docker-compose.yml` environment)
 
 You can import or configure dashboards in Grafana to consume Prometheus metrics. The included `prometheus.yml` should already scrape the instrumented services configured in the stack.
 
-## Notes & Troubleshooting
-- If you get port conflicts adjust the host-side port mappings in `docker-compose.yml`.
-- Ensure Docker has sufficient memory; Kafka and multiple DBs can be memory hungry.
-- If images are not updated after local code changes, rebuild with Jib: `mvn compile jib:dockerBuild` and then `docker compose up --force-recreate --build` (or down/up).
-- For Windows PowerShell use `;` to chain commands on one line if needed.
-
 ## Next steps
 - Run `mvn compile jib:dockerBuild` then `docker compose up` to bring up the local stack.
 - Open Grafana at `http://localhost:3000` (admin/password) and Prometheus at `http://localhost:9090`.
-
-If you'd like, I can also:
-- run the Maven and Docker Compose commands here (if you want me to execute them), or
-- add example Grafana dashboards and a minimal `prometheus.yml` scrape config for the services.
