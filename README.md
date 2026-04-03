@@ -8,6 +8,34 @@ ShopVerse is a collection of Spring Boot microservices (API Gateway, service dis
 - **Messaging & infra:** Kafka, PostgreSQL, MongoDB, Redis
 - **Observability:** Zipkin, Prometheus, Grafana
 
+## Architecture
+
+This project follows a microservices architecture with API Gateway, messaging, and observability.
+
+![Architecture Diagram](docs/architecture2.png)
+
+### Components
+
+#### Core Services
+- API Gateway – entry point
+- Product Service – manages products (MongoDB)
+- Order Service – handles orders (PostgreSQL)
+- Inventory Service – manages inventory (PostgreSQL), synchronously called by Order Service (REST) with Resilience4j
+- Kafka – asynchronous event streaming platform
+- Notification Service – consumes events and sends notifications
+
+#### Observability
+- Prometheus – metrics collection and monitoring
+- Grafana – visualization and dashboards
+- Zipkin – distributed tracing across services
+
+#### Infrastructure
+- Docker – containerization of services
+- Kubernetes – container orchestration and deployment
+
+#### CI/CD
+- GitHub Actions – automated build, test, and deployment pipelines
+
 ## Prerequisites
 - **Docker & Docker Compose**: Ensure Docker Desktop is installed and running.
 - **Maven**: Required to build the Java modules and produce Docker images via Jib.
