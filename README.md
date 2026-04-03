@@ -12,7 +12,7 @@ ShopVerse is a collection of Spring Boot microservices (API Gateway, service dis
 
 This project follows a microservices architecture with API Gateway, messaging, and observability.
 
-![Architecture Diagram](docs/architecture2.png)
+![Architecture Diagram](docs/architecture.png)
 
 ### Components
 
