@@ -31,9 +31,9 @@ Online shopping allows user to buy products
 
 ## Diagrams
 
-![HLD Diagram](docs/HLD_ecommerce.drawio.svg)
+![HLD Diagram](HLD_ecommerce.drawio.svg)
 
-![LLD Diagram](docs/LLD_ecommerce.drawio.svg)
+![LLD Diagram](LLD_ecommerce.drawio.svg)
 
 
 
