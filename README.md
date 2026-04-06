@@ -14,6 +14,9 @@ This project follows a microservices architecture with API Gateway, messaging, a
 
 ![Architecture Diagram](docs/architecture.svg)
 
+
+- [System Design](docs/SystemDesign.md) – detailed design of the e-commerce platform including functional requirements, non-functional requirements, core entities, HLD, LLD and API design
+
 ### Components
 
 #### Core Services
