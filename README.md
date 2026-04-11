@@ -16,7 +16,7 @@ This project follows a microservices architecture with API Gateway, messaging, a
 - **Messaging & infra:** Kafka, PostgreSQL, MongoDB, Redis
 - **Observability:** Zipkin, Prometheus, Grafana
 
-- [System Design](docs/SystemDesign.md) – detailed design of the e-commerce platform including functional requirements, non-functional requirements, core entities, HLD, LLD and API design
+**[System Design](docs/SystemDesign.md)** – detailed design of the e-commerce platform including functional requirements, non-functional requirements, core entities, HLD, LLD and API design
 
 ### Components
 
