@@ -1,12 +1,7 @@
 # ShopVerse Services
 ShopVerse is a collection of Spring Boot microservices (API Gateway, service discovery, and several domain services). Each service is container-ready and instrumented for observability. This repository contains multi-module Maven projects and a `docker-compose.yml` that brings up infrastructure and application services (including Prometheus and Grafana).
 
-**Quick overview:**
-- **Service discovery:** `discovery-server` (Eureka)
-- **Gateway:** `api-gateway` (Spring Cloud Gateway)
-- **Domain services:** `product-service`, `order-service`, `inventory-service`, `notification-service`
-- **Messaging & infra:** Kafka, PostgreSQL, MongoDB, Redis
-- **Observability:** Zipkin, Prometheus, Grafana
+![LLD Diagram](docs/LLD_ecommerce.drawio.svg)
 
 ## Architecture
 
@@ -14,6 +9,12 @@ This project follows a microservices architecture with API Gateway, messaging, a
 
 ![Architecture Diagram](docs/architecture.svg)
 
+**Quick overview:**
+- **Service discovery:** `discovery-server` (Eureka)
+- **Gateway:** `api-gateway` (Spring Cloud Gateway)
+- **Domain services:** `product-service`, `order-service`, `inventory-service`, `notification-service`
+- **Messaging & infra:** Kafka, PostgreSQL, MongoDB, Redis
+- **Observability:** Zipkin, Prometheus, Grafana
 
 - [System Design](docs/SystemDesign.md) – detailed design of the e-commerce platform including functional requirements, non-functional requirements, core entities, HLD, LLD and API design
 
